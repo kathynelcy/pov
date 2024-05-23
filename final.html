@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice Generator</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h1 { text-align: center; }
+        form { max-width: 600px; margin: 0 auto; }
+        label { display: block; margin-top: 10px; }
+        input, button { width: 100%; padding: 8px; margin-top: 5px; }
+        button { cursor: pointer; }
+        .item { margin-bottom: 20px; }
+        .hidden { display: none; }
+        .invoice { max-width: 800px; margin: 20px auto; padding: 20px; border: 1px solid #ccc; }
+        .invoice h2, .invoice h3 { text-align: center; }
+        .invoice p { margin: 5px 0; }
+        .invoice table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .invoice th, .invoice td { border: 1px solid #000; padding: 8px; text-align: left; }
+        .invoice tfoot td { font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>POV SOLUTION INVOICE</h1>
+    <form id="invoice-form">
+        <h2>Trainer Information</h2>
+        <label for="trainerName">Trainer Name:</label>
+        <input type="text" id="trainerName" name="trainerName" required>
+
+        <label for="emailAddress">Email Address:</label>
+        <input type="email" id="emailAddress" name="emailAddress" required>
+
+        <h2>Trainer Details</h2>
+        <div id="trainerContainer">
+            <div class="trainer">
+                <label for="trainerName1">Trainer Name:</label>
+                <input type="text" id="trainerName1" name="trainerName[]" required>
+
+                <label for="daysWorking1">No of days working:</label>
+                <input type="number" id="daysWorking1" name="daysWorking[]" required>
+
+                <label for="dailySalary1">Per day salary:</label>
+                <input type="number" id="dailySalary1" name="dailySalary[]" required>
+            </div>
+        </div>
+        <button type="button" onclick="addTrainer()">Add Another Trainer</button>
+        <button type="submit">Generate Invoice</button>
+    </form>
+
+    <div id="invoice" class="invoice hidden">
+        <h2>Invoice</h2>
+        <h3>Invoice #<span id="invoiceNumber"></span></h3>
+        <p>Date: <span id="invoiceDate"></span></p>
+        <div id="invoiceClientInfo">
+            <p>Trainer Name: <span id="displayTrainerName"></span></p>
+            <p>Email Address: <span id="displayEmailAddress"></span></p>
+        </div>
+        <table id="invoiceItems">
+            <thead>
+                <tr>
+                    <th>Trainer Name</th>
+                    <th>No of days working</th>
+                    <th>Per day salary</th>
+                    <th>Amount</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="3">Total</td>
+                    <td id="totalAmount"></td>
+                </tr>
+            </tfoot>
+        </table>
+        <button onclick="downloadPDF()">Download as PDF</button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.2/html2pdf.bundle.min.js"></script>
+    <script>
+        let trainerCount = 1;
+
+        function addTrainer() {
+            trainerCount++;
+            const trainerContainer = document.getElementById('trainerContainer');
+            const newTrainer = document.createElement('div');
+            newTrainer.className = 'trainer';
+            newTrainer.innerHTML = `
+                <label for="trainerName${trainerCount}">Trainer Name:</label>
+                <input type="text" id="trainerName${trainerCount}" name="trainerName[]" required>
+
+                <label for="daysWorking${trainerCount}">No of days working:</label>
+                <input type="number" id="daysWorking${trainerCount}" name="daysWorking[]" required>
+
+                <label for="dailySalary${trainerCount}">Per day salary:</label>
+                <input type="number" id="dailySalary${trainerCount}" name="dailySalary[]" required>
+            `;
+            trainerContainer.appendChild(newTrainer);
+        }
+
+        document.getElementById('invoice-form').onsubmit = function(event) {
+            event.preventDefault();
+
+            const trainerName = document.getElementById('trainerName').value;
+            const emailAddress = document.getElementById('emailAddress').value;
+            const trainerNames = document.querySelectorAll('input[name="trainerName[]"]');
+            const daysWorking = document.querySelectorAll('input[name="daysWorking[]"]');
+            const dailySalary = document.querySelectorAll('input[name="dailySalary[]"]');
+
+            document.getElementById('displayTrainerName').textContent = trainerName;
+            document.getElementById('displayEmailAddress').textContent = emailAddress;
+
+            const today = new Date().toLocaleDateString();
+            document.getElementById('invoiceDate').textContent = today;
+            document.getElementById('invoiceNumber').textContent = Math.floor(Math.random() * 1000000);
+
+            let invoiceItemsHTML = '';
+            let totalAmount = 0;
+
+            for (let i = 0; i < trainerNames.length; i++) {
+                const name = trainerNames[i].value;
+                const days = daysWorking[i].value;
+                const salary = dailySalary[i].value;
+                const amount = days * salary;
+                totalAmount += amount;
+
+                invoiceItemsHTML += `
+                    <tr>
+                        <td>${name}</td>
+                        <td>${days}</td>
+                        <td>${salary}</td>
+                        <td>${amount}</td>
+                    </tr>
+                `;
+            }
+
+            document.querySelector('#invoiceItems tbody').innerHTML = invoiceItemsHTML;
+            document.getElementById('totalAmount').textContent = totalAmount.toFixed(2);
+            document.getElementById('invoice').classList.remove('hidden');
+        };
+
+        function downloadPDF() {
+            const invoice = document.getElementById('invoice');
+            const opt = {
+                margin: 0.5,
+                filename: 'invoice.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+            };
+
+            html2pdf().from(invoice).set(opt).save();
+        }
+    </script>
+</body>
+</html>
+
